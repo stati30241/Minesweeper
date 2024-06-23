@@ -14,7 +14,7 @@ private:
 public:
 	size_t numMines = 0;
 	bool isMine = false;
-	bool isCovered = false;
+	bool isCovered = true;
 	bool isSatisfied = false;
 	bool isFlagged = false;
 
@@ -38,6 +38,9 @@ private:
 
 private:
 	void initialize(size_t numMines);
+
+	void floodFill(const sf::Vector2i& cellPos);
+	void gameOver();
 
 public:
 	Grid() : m_window{ nullptr } { };

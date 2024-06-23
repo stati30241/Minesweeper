@@ -19,15 +19,14 @@ void Cell::setTexture(size_t index) {
 
 
 void Cell::render(sf::RenderTarget* target, const sf::Vector2f& position, const sf::Vector2f& cellSize) {
-	if (isCovered && !isFlagged) return;
-
 	sf::Transform transform;
 	transform.translate(position);
 	transform.scale({ cellSize.x / 32.0f, cellSize.y / 32.0f });
 	sf::RenderStates states{ transform };
 	states.texture = &TextureManager::get("textureatlas.png").texture;
 
-	if (isFlagged) setTexture(11);
+	if (isCovered && !isFlagged) setTexture(12);
+	else if (isFlagged) setTexture(11);
 	else if (isMine) setTexture(10);
 	else setTexture(numMines);
 	target->draw(m_vertecies, states);
@@ -78,18 +77,67 @@ void Grid::initialize(size_t numMines) {
 }
 
 
-void Grid::handleInputs(const sf::Event& sfmlEvent) {
+void Grid::floodFill(const sf::Vector2i& cellPos) {
+	std::unordered_set<sf::Vector2i> visited{ cellPos };
+	std::queue<sf::Vector2i> queue;
+	queue.push(cellPos);
+	
+	while (!queue.empty()) {
+		sf::Vector2i current = queue.front();
+		visited.insert(current);
+		queue.pop();
 
+		if (m_cells.at(current.x + current.y * m_size.x).numMines != 0) continue;
+
+		for (const auto& [dx, dy] : std::vector<std::pair<int, int>>
+			{ {-1, -1}, {-1, 0}, {-1, 1}, {0, -1}, {0, 1}, {1, -1}, {1, 0}, {1, 1} }) {
+			if (current.x + dx < 0 || current.x + dx >= m_size.x || current.y + dy < 0 || current.y + dy >= m_size.y) continue;
+			if (m_cells.at((current.x + dx) + (current.y + dy) * m_size.x).isMine) continue;
+			if (visited.contains({ current.x + dx, current.y + dy })) continue;
+			queue.push({ current.x + dx, current.y + dy });
+		}
+	}
+
+	for (const auto& pos : visited) {
+		m_cells.at(pos.x + pos.y * m_size.x).isCovered = false;
+	}
+}
+
+
+void Grid::gameOver() {
+	for (Cell& cell : m_cells) {
+		cell.isFlagged = false;
+		cell.isCovered = false;
+	}
+}
+
+
+void Grid::handleInputs(const sf::Event& sfmlEvent) {
+	const sf::Vector2f mousePos{ sf::Vector2f{ sf::Mouse::getPosition(*m_window) } - m_topLeft };
+	const sf::Vector2i cellPos = { static_cast<int>(mousePos.x / m_cellSize.x), static_cast<int>(mousePos.y / m_cellSize.y) };
+
+	switch (sfmlEvent.type) {
+	case sf::Event::MouseButtonPressed:
+		if (sfmlEvent.mouseButton.button == sf::Mouse::Left) {
+			if (m_cells.at(cellPos.x + cellPos.y * m_size.x).isFlagged) break;
+			else if (m_cells.at(cellPos.x + cellPos.y * m_size.x).isMine) gameOver();
+			else  floodFill(cellPos);
+		} else if (sfmlEvent.mouseButton.button == sf::Mouse::Right) {
+			if (!m_cells.at(cellPos.x + cellPos.y * m_size.x).isCovered) break;
+			m_cells.at(cellPos.x + cellPos.y * m_size.x).isFlagged = !m_cells.at(cellPos.x + cellPos.y * m_size.x).isFlagged;
+		}
+		break;
+	}
 }
 
 
 void Grid::render() {
-	m_window->draw(m_grid);
-
 	for (size_t i = 0; i < m_size.x; ++i) {
 		for (size_t j = 0; j < m_size.y; ++j) {
 			const sf::Vector2f pos = m_topLeft + sf::Vector2f{ i * m_cellSize.x, j * m_cellSize.y };
 			m_cells.at(i + j * m_size.x).render(m_window, pos, m_cellSize);
 		}
 	}
+
+	m_window->draw(m_grid);
 }
