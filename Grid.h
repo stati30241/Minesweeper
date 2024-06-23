@@ -1,33 +1,26 @@
 #pragma once
 
-#include <SFML/Graphics.hpp>
-
-#include <ctime>
-#include <random>
-#include <string>
-#include <vector>
+#include "GUI.h"
 
 
-int randInt(int a, int b);
-
-
-class FontManager {
-public:
-	sf::Font font;
+// Manages each individual cell
+class Cell {
+private:
+	sf::VertexArray m_vertecies{ sf::Quads };
 
 private:
-	FontManager(std::string_view filename) {
-		font.loadFromFile(filename.data());
-	}
-
-	FontManager(const FontManager& copy);
-	FontManager operator= (const FontManager& copy);
+	void setTexture(size_t index);
 
 public:
-	static FontManager& getFont(std::string_view filename = "") {
-		static FontManager instance{ filename };
-		return instance;
-	}
+	size_t numMines = 0;
+	bool isMine = false;
+	bool isCovered = false;
+	bool isSatisfied = false;
+	bool isFlagged = false;
+
+public:
+	Cell();
+	void render(sf::RenderTarget* target, const sf::Vector2f& position, const sf::Vector2f& cellSize);
 };
 
 
@@ -37,16 +30,17 @@ private:
 	sf::RenderWindow* m_window;
 	sf::Vector2i m_size;
 	sf::Vector2f m_cellSize;
-	std::vector<char> m_grid;
+	std::vector<Cell> m_cells;
 
-	sf::VertexArray m_vertecies{ sf::Lines };
-	std::vector<sf::Text> m_numbersText;
+	sf::VertexArray m_grid{ sf::Lines };
+	sf::Vector2f m_topLeft;
+	sf::Vector2f m_bottomRight;
 
 private:
 	void initialize(size_t numMines);
 
 public:
-	Grid() { };
+	Grid() : m_window{ nullptr } { };
 	Grid(sf::RenderWindow* window, const sf::Vector2i& size, size_t numMines);
 
 	void handleInputs(const sf::Event& sfmlEvent);
