@@ -40,3 +40,19 @@ public:
 		return instance;
 	}
 };
+
+
+class Button : public sf::Drawable, public sf::Transformable {
+private:
+	sf::Sprite m_sprite;
+	bool m_enabled = false;
+
+private:
+	virtual void draw(sf::RenderTarget& target, sf::RenderStates states) const override;
+
+public:
+	Button(const sf::Vector2f& position, const sf::Vector2f& size, const sf::IntRect& textureRect);
+
+	void handleInputs(const sf::Event& sfmlEvent);
+	bool isEnabled() const { return m_enabled; }
+};
