@@ -7,6 +7,7 @@
 #include <random>
 #include <string>
 #include <vector>
+#include <unordered_map>
 #include <unordered_set>
 
 
@@ -28,7 +29,7 @@ public:
 private:
 	TextureManager(std::string_view filename) {
 		texture.loadFromFile(filename.data());
-		texture.setSmooth(true);
+		//texture.setSmooth(true);
 	}
 
 	TextureManager(const TextureManager& copy);
@@ -55,4 +56,7 @@ public:
 
 	void handleInputs(const sf::Event& sfmlEvent);
 	bool isEnabled() const { return m_enabled; }
+
+	void enable() { m_enabled = true; }
+	void disable() { m_enabled = false; }
 };

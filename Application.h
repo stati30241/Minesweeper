@@ -9,6 +9,7 @@ private:
 	sf::Clock m_clock;
 
 	Grid m_grid;
+	std::unordered_map<std::string, Button> m_buttons;
 
 private:
 	void initialize();
