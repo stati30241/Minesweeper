@@ -72,6 +72,23 @@ void Application::update() {
 		m_buttons.erase("Size Large");
 		m_buttons.erase("Clear");
 	}
+
+
+	if (m_buttons.at("New Game").isEnabled()) {
+		if (m_buttons.at("Easy").isEnabled()) {
+			m_grid = Grid(m_window, { 10, 10 }, 8);
+			m_buttons.at("Easy").disable();
+			m_buttons.at("New Game").disable();
+		} if (m_buttons.at("Medium").isEnabled()) {
+			m_grid = Grid(m_window, { 12, 12 }, 16);
+			m_buttons.at("Medium").disable();
+			m_buttons.at("New Game").disable();
+		} if (m_buttons.at("Hard").isEnabled()) {
+			m_grid = Grid(m_window, { 18, 18 }, 48);
+			m_buttons.at("Hard").disable();
+			m_buttons.at("New Game").disable();
+		}
+	}
 }
 
 
