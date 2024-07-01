@@ -6,16 +6,16 @@
 // Manages each individual cell
 class Cell {
 private:
-	sf::VertexArray m_vertecies{ sf::Quads };
+	sf::Sprite m_sprite;
 
 private:
 	void setTexture(size_t index);
 
 public:
 	size_t numMines = 0;
+	size_t numFlags = 0;
 	bool isMine = false;
 	bool isCovered = true;
-	bool isSatisfied = false;
 	bool isFlagged = false;
 
 public:
@@ -33,11 +33,14 @@ private:
 	std::vector<Cell> m_cells;
 
 	sf::VertexArray m_grid{ sf::Lines };
+	sf::VertexArray m_highlightedCells{ sf::Quads };
 	sf::Vector2f m_topLeft;
 	sf::Vector2f m_bottomRight;
 
 private:
 	void initialize(size_t numMines);
+
+	void updateHighlighedCells(const sf::Vector2i& cellPos);
 
 	void floodFill(const sf::Vector2i& cellPos);
 	void gameOver();

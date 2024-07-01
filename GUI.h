@@ -28,6 +28,7 @@ public:
 private:
 	TextureManager(std::string_view filename) {
 		texture.loadFromFile(filename.data());
+		texture.setSmooth(true);
 	}
 
 	TextureManager(const TextureManager& copy);

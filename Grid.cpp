@@ -2,19 +2,13 @@
 
 
 Cell::Cell() {
-	m_vertecies.append({ { 0.0f, 0.0f } });
-	m_vertecies.append({ { 32.0f, 0.0f } });
-	m_vertecies.append({ { 32.0f, 32.0f } });
-	m_vertecies.append({ { 0.0f, 32.0f } });
+	m_sprite.setTexture(TextureManager::get("textureatlas.png").texture);
 }
 
 
 void Cell::setTexture(size_t index) {
-	const sf::Vector2f texCoords{ 32.0f * (index % 5), 32.0f * (index / 5) };
-	m_vertecies[0].texCoords = { texCoords.x, texCoords.y };
-	m_vertecies[1].texCoords = { texCoords.x + 32.0f, texCoords.y };
-	m_vertecies[2].texCoords = { texCoords.x + 32.0f, texCoords.y + 32.0f };
-	m_vertecies[3].texCoords = { texCoords.x, texCoords.y + 32.0f };
+	const sf::Vector2i texCoords{ 32 * (static_cast<int>(index) % 5), 32 * (static_cast<int>(index) / 5) };
+	m_sprite.setTextureRect({ { texCoords.x, texCoords.y },{ 32, 32 } });
 }
 
 
@@ -23,13 +17,21 @@ void Cell::render(sf::RenderTarget* target, const sf::Vector2f& position, const 
 	transform.translate(position);
 	transform.scale({ cellSize.x / 32.0f, cellSize.y / 32.0f });
 	sf::RenderStates states{ transform };
-	states.texture = &TextureManager::get("textureatlas.png").texture;
 
 	if (isCovered && !isFlagged) setTexture(12);
 	else if (isFlagged) setTexture(11);
 	else if (isMine) setTexture(10);
-	else setTexture(numMines);
-	target->draw(m_vertecies, states);
+	else {
+		setTexture(numMines);
+		if (numMines > numFlags) {
+			m_sprite.setColor({ 255, 255, 255 });
+		} else if (numMines == numFlags) {
+			m_sprite.setColor({ 150, 150, 150 });
+		} else if (numMines < numFlags) {
+			m_sprite.setColor({ 255, 0, 0 });
+		}
+	}
+	target->draw(m_sprite, states);
 }
 
 
@@ -77,6 +79,24 @@ void Grid::initialize(size_t numMines) {
 }
 
 
+void Grid::updateHighlighedCells(const sf::Vector2i& cellIndex) {
+	m_highlightedCells.clear();
+	sf::Color highlightColor = { 255, 255, 255, 50 };
+	for (const auto& [dx, dy] : std::vector<std::pair<int, int>>
+		{ {-1, -1}, {-1, 0}, {-1, 1}, {0, -1}, {0, 0},  {0, 1}, {1, -1}, {1, 0}, {1, 1} }) {
+		if (cellIndex.x + dx < 0 || cellIndex.x + dx >= m_size.x || cellIndex.y + dy < 0 || cellIndex.y + dy >= m_size.y) continue;
+		if (!m_cells.at((cellIndex.x + dx) + (cellIndex.y + dy) * m_size.x).isCovered) continue;
+		sf::Vector2f cellPos = sf::Vector2f{ cellIndex + sf::Vector2i{dx, dy} };
+		cellPos = sf::Vector2f{ cellPos.x * m_cellSize.x, cellPos.y * m_cellSize.y } + m_topLeft;
+
+		m_highlightedCells.append({ {cellPos.x, cellPos.y}, highlightColor });
+		m_highlightedCells.append({ {cellPos.x + m_cellSize.x, cellPos.y}, highlightColor });
+		m_highlightedCells.append({ {cellPos.x + m_cellSize.x, cellPos.y + m_cellSize.y}, highlightColor });
+		m_highlightedCells.append({ {cellPos.x, cellPos.y + m_cellSize.y}, highlightColor });
+	}
+}
+
+
 void Grid::floodFill(const sf::Vector2i& cellPos) {
 	std::unordered_set<sf::Vector2i> visited{ cellPos };
 	std::queue<sf::Vector2i> queue;
@@ -108,6 +128,7 @@ void Grid::gameOver() {
 	for (Cell& cell : m_cells) {
 		cell.isFlagged = false;
 		cell.isCovered = false;
+		cell.numFlags = 0;
 	}
 }
 
@@ -116,8 +137,9 @@ void Grid::handleInputs(const sf::Event& sfmlEvent) {
 	const sf::Vector2f mousePos{ sf::Vector2f{ sf::Mouse::getPosition(*m_window) } - m_topLeft };
 	const sf::Vector2i cellPos = { static_cast<int>(std::floorf(mousePos.x / m_cellSize.x)),
 		static_cast<int>(std::floorf(mousePos.y / m_cellSize.y)) };
-
+	
 	if (cellPos.x < 0 || cellPos.x >= m_size.x || cellPos.y < 0 || cellPos.y >= m_size.y) return;
+	updateHighlighedCells(cellPos);
 
 	switch (sfmlEvent.type) {
 	case sf::Event::MouseButtonPressed:
@@ -128,6 +150,14 @@ void Grid::handleInputs(const sf::Event& sfmlEvent) {
 		} else if (sfmlEvent.mouseButton.button == sf::Mouse::Right) {
 			if (!m_cells.at(cellPos.x + cellPos.y * m_size.x).isCovered) break;
 			m_cells.at(cellPos.x + cellPos.y * m_size.x).isFlagged = !m_cells.at(cellPos.x + cellPos.y * m_size.x).isFlagged;
+
+			for (const auto& [dx, dy] : std::vector<std::pair<int, int>>
+				{ {-1, -1}, {-1, 0}, {-1, 1}, {0, -1}, {0, 1}, {1, -1}, {1, 0}, {1, 1} }) {
+				if (cellPos.x + dx < 0 || cellPos.x + dx >= m_size.x || cellPos.y + dy < 0 || cellPos.y + dy >= m_size.y) continue;
+				if (m_cells.at((cellPos.x + dx) + (cellPos.y + dy) * m_size.x).isMine) continue;
+				m_cells.at((cellPos.x + dx) + (cellPos.y + dy) * m_size.x).numFlags +=
+					m_cells.at(cellPos.x + cellPos.y * m_size.x).isFlagged ? 1 : -1;
+			}
 		}
 		break;
 	}
@@ -141,6 +171,8 @@ void Grid::render() {
 			m_cells.at(i + j * m_size.x).render(m_window, pos, m_cellSize);
 		}
 	}
+
+	m_window->draw(m_highlightedCells);
 
 	m_window->draw(m_grid);
 }
