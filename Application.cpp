@@ -17,7 +17,7 @@ void Application::initialize() {
 	sf::Uint32 windowStyle = sf::Style::Close;
 	m_window = new sf::RenderWindow{ windowSize, windowTitle, windowStyle };
 
-	m_grid = Grid{ m_window, { 8, 8 }, 10 };
+	m_grid = Grid{ m_window, { 12, 12 }, 16 };
 }
 
 

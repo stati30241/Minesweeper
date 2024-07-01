@@ -84,7 +84,6 @@ void Grid::floodFill(const sf::Vector2i& cellPos) {
 	
 	while (!queue.empty()) {
 		sf::Vector2i current = queue.front();
-		visited.insert(current);
 		queue.pop();
 
 		if (m_cells.at(current.x + current.y * m_size.x).numMines != 0) continue;
@@ -95,6 +94,7 @@ void Grid::floodFill(const sf::Vector2i& cellPos) {
 			if (m_cells.at((current.x + dx) + (current.y + dy) * m_size.x).isMine) continue;
 			if (visited.contains({ current.x + dx, current.y + dy })) continue;
 			queue.push({ current.x + dx, current.y + dy });
+			visited.insert({ current.x + dx, current.y + dy });
 		}
 	}
 
@@ -114,7 +114,10 @@ void Grid::gameOver() {
 
 void Grid::handleInputs(const sf::Event& sfmlEvent) {
 	const sf::Vector2f mousePos{ sf::Vector2f{ sf::Mouse::getPosition(*m_window) } - m_topLeft };
-	const sf::Vector2i cellPos = { static_cast<int>(mousePos.x / m_cellSize.x), static_cast<int>(mousePos.y / m_cellSize.y) };
+	const sf::Vector2i cellPos = { static_cast<int>(std::floorf(mousePos.x / m_cellSize.x)),
+		static_cast<int>(std::floorf(mousePos.y / m_cellSize.y)) };
+
+	if (cellPos.x < 0 || cellPos.x >= m_size.x || cellPos.y < 0 || cellPos.y >= m_size.y) return;
 
 	switch (sfmlEvent.type) {
 	case sf::Event::MouseButtonPressed:
