@@ -18,6 +18,7 @@ void Application::initialize() {
 	m_window = new sf::RenderWindow{ windowSize, windowTitle, windowStyle };
 
 	m_grid = Grid{ m_window, { 12, 12 }, 16 };
+	m_canvas = Canvas{ m_window };
 
 	m_buttons.insert({ "New Game", Button{ { 22, 75 }, { 256, 64 }, { { 0, 129 }, { 128, 32 } } } });
 	m_buttons.insert({ "Draw", Button{ { 936, 80 }, { 96, 96 }, { { 128, 129 }, { 32, 32 } } } });
@@ -31,7 +32,8 @@ void Application::handleInputs() {
 			button.handleInputs(sfmlEvent);
 		}
 
-		m_grid.handleInputs(sfmlEvent);
+		if (m_buttons.at("Draw").isEnabled()) m_canvas.handleInputs(sfmlEvent);
+		else m_grid.handleInputs(sfmlEvent);
 
 		switch (sfmlEvent.type) {
 		case sf::Event::Closed:
@@ -96,6 +98,8 @@ void Application::render() {
 	m_window->clear({ 50, 40, 80 });
 
 	m_grid.render();
+	m_canvas.render();
+
 
 	for (auto& [str, button] : m_buttons) {
 		m_window->draw(button);
