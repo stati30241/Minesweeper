@@ -43,6 +43,26 @@ public:
 };
 
 
+class FontManager {
+public:
+	sf::Font font;
+
+private:
+	FontManager(std::string_view filename) {
+		font.loadFromFile(filename.data());
+	}
+
+	FontManager(const FontManager& copy);
+	FontManager operator= (const FontManager& copy);
+
+public:
+	static FontManager& get(std::string_view filename = "") {
+		static FontManager instance{ filename };
+		return instance;
+	}
+};
+
+
 class Button : public sf::Drawable, public sf::Transformable {
 private:
 	sf::Sprite m_sprite;

@@ -1,8 +1,6 @@
 #pragma once
 
 #include "Grid.h"
-#include "Canvas.h"
-
 
 class Application {
 private:
@@ -10,7 +8,6 @@ private:
 	sf::Clock m_clock;
 
 	Grid m_grid;
-	Canvas m_canvas;
 	std::unordered_map<std::string, Button> m_buttons;
 
 private:

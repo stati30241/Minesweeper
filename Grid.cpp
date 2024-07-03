@@ -36,19 +36,45 @@ void Cell::render(sf::RenderTarget* target, const sf::Vector2f& position, const 
 
 
 Grid::Grid(sf::RenderWindow* window, const sf::Vector2i& size, size_t numMines)
-	: m_window{ window }, m_size { size } {
-	initialize(numMines);
+	: m_window{ window }, m_size{ size }, m_numMines{ numMines } {
+	initialize();
 }
 
 
-void Grid::initialize(size_t numMines) {
+void Grid::initialize() {
 	m_cellSize = { 600.0f / m_size.y, 600.0f / m_size.y };
 	m_cells = std::vector<Cell>(m_size.x * m_size.y, Cell{});
 
+	// Initializes grid vertecies
+	m_topLeft = (sf::Vector2f{ m_window->getSize() } - sf::Vector2f{ m_cellSize.x * m_size.x, m_cellSize.y * m_size.y }) / 2.0f;
+	m_bottomRight = (sf::Vector2f{ m_window->getSize() } + sf::Vector2f{ m_cellSize.x * m_size.x, m_cellSize.y * m_size.y }) / 2.0f;
+	for (float i = m_topLeft.x; i <= m_bottomRight.x; i += m_cellSize.x) {
+		m_grid.append({ { i, m_topLeft.y } });
+		m_grid.append({ { i, m_bottomRight.y } });
+	}
+	for (float j = m_topLeft.y; j <= m_bottomRight.y; j += m_cellSize.y) {
+		m_grid.append({ { m_topLeft.x, j } });
+		m_grid.append({ { m_bottomRight.x, j } });
+	}
+
+	m_flagText.setPosition(936.0f, 550.0f);
+	m_flagText.setStyle(sf::Text::Bold);
+
+	m_timerText.setPosition(936.0f, 500.0f);
+	m_timerText.setStyle(sf::Text::Bold);
+
+	m_gameOverText.setPosition(936.0f, 317.0f);
+	m_gameOverText.setStyle(sf::Text::Bold);
+}
+
+
+void Grid::createGame(const sf::Vector2i& cellPos) {
 	// Finds random positions for the mines
-	for (size_t i = 0; i < numMines;) {
+	for (size_t i = 0; i < m_numMines;) {
 		const sf::Vector2i minePos = { randInt(0, m_size.x - 1), randInt(0, m_size.y - 1) };
 		if (m_cells.at(minePos.x + minePos.y * m_size.x).isMine) continue;
+		if (minePos.x >= cellPos.x - 1 && minePos.x <= cellPos.x + 1 &&
+			minePos.y >= cellPos.y - 1 && minePos.y <= cellPos.y + 1) continue;
 		m_cells.at(minePos.x + minePos.y * m_size.x).isMine = true;
 		i++;
 	}
@@ -65,17 +91,7 @@ void Grid::initialize(size_t numMines) {
 		}
 	}
 
-	// Initializes grid vertecies
-	m_topLeft = (sf::Vector2f{ m_window->getSize() } - sf::Vector2f{ m_cellSize.x * m_size.x, m_cellSize.y * m_size.y }) / 2.0f;
-	m_bottomRight = (sf::Vector2f{ m_window->getSize() } + sf::Vector2f{ m_cellSize.x * m_size.x, m_cellSize.y * m_size.y }) / 2.0f;
-	for (float i = m_topLeft.x; i <= m_bottomRight.x; i += m_cellSize.x) {
-		m_grid.append({ { i, m_topLeft.y } });
-		m_grid.append({ { i, m_bottomRight.y } });
-	}
-	for (float j = m_topLeft.y; j <= m_bottomRight.y; j += m_cellSize.y) {
-		m_grid.append({ { m_topLeft.x, j } });
-		m_grid.append({ { m_bottomRight.x, j } });
-	}
+	m_initialized = true;
 }
 
 
@@ -130,6 +146,17 @@ void Grid::gameOver() {
 		cell.isCovered = false;
 		cell.numFlags = 0;
 	}
+
+	m_gameOverText.setString("You Lose");
+
+	m_gameOver = true;
+}
+
+
+void Grid::gameWin() {
+	m_gameOverText.setString("You Win");
+
+	m_gameOver = true;
 }
 
 
@@ -144,12 +171,18 @@ void Grid::handleInputs(const sf::Event& sfmlEvent) {
 	switch (sfmlEvent.type) {
 	case sf::Event::MouseButtonPressed:
 		if (sfmlEvent.mouseButton.button == sf::Mouse::Left) {
+			if (!m_initialized) createGame(cellPos);
+
 			if (m_cells.at(cellPos.x + cellPos.y * m_size.x).isFlagged) break;
 			else if (m_cells.at(cellPos.x + cellPos.y * m_size.x).isMine) gameOver();
 			else  floodFill(cellPos);
+
 		} else if (sfmlEvent.mouseButton.button == sf::Mouse::Right) {
 			if (!m_cells.at(cellPos.x + cellPos.y * m_size.x).isCovered) break;
 			m_cells.at(cellPos.x + cellPos.y * m_size.x).isFlagged = !m_cells.at(cellPos.x + cellPos.y * m_size.x).isFlagged;
+			
+			if (m_cells.at(cellPos.x + cellPos.y * m_size.x).isFlagged) m_numFlags++;
+			else m_numFlags--;
 
 			for (const auto& [dx, dy] : std::vector<std::pair<int, int>>
 				{ {-1, -1}, {-1, 0}, {-1, 1}, {0, -1}, {0, 1}, {1, -1}, {1, 0}, {1, 1} }) {
@@ -160,6 +193,28 @@ void Grid::handleInputs(const sf::Event& sfmlEvent) {
 			}
 		}
 		break;
+	}
+}
+
+
+void Grid::update(float deltaTime) {
+	if (m_initialized && !m_gameOver) {
+		timer += deltaTime;
+		m_timerText.setString("Time: " + std::to_string(static_cast<int>(timer)));
+	}
+
+	int numFlagsRemaining = static_cast<int>(m_numMines) - static_cast<int>(m_numFlags);
+	if (numFlagsRemaining < 0) m_flagText.setFillColor(sf::Color::Red);
+	else m_flagText.setFillColor(sf::Color::White);
+	m_flagText.setString("Flags: " + std::to_string(numFlagsRemaining));
+
+	bool allTilesUncovered = true;
+	for (size_t i = 0; i < m_cells.size(); ++i) {
+		if (m_cells.at(i).isMine) continue;
+		if (m_cells.at(i).isCovered) allTilesUncovered = false;
+	}
+	if (allTilesUncovered && numFlagsRemaining == 0 && !m_gameOver) {
+		gameWin();
 	}
 }
 
@@ -175,4 +230,9 @@ void Grid::render() {
 	m_window->draw(m_highlightedCells);
 
 	m_window->draw(m_grid);
+
+	m_window->draw(m_timerText);
+	m_window->draw(m_flagText);
+
+	if (m_gameOver) m_window->draw(m_gameOverText);
 }

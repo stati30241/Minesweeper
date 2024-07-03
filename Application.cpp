@@ -18,10 +18,8 @@ void Application::initialize() {
 	m_window = new sf::RenderWindow{ windowSize, windowTitle, windowStyle };
 
 	m_grid = Grid{ m_window, { 12, 12 }, 16 };
-	m_canvas = Canvas{ m_window };
 
 	m_buttons.insert({ "New Game", Button{ { 22, 75 }, { 256, 64 }, { { 0, 129 }, { 128, 32 } } } });
-	m_buttons.insert({ "Draw", Button{ { 936, 80 }, { 96, 96 }, { { 128, 129 }, { 32, 32 } } } });
 }
 
 
@@ -32,8 +30,7 @@ void Application::handleInputs() {
 			button.handleInputs(sfmlEvent);
 		}
 
-		if (m_buttons.at("Draw").isEnabled()) m_canvas.handleInputs(sfmlEvent);
-		else m_grid.handleInputs(sfmlEvent);
+		m_grid.handleInputs(sfmlEvent);
 
 		switch (sfmlEvent.type) {
 		case sf::Event::Closed:
@@ -57,25 +54,6 @@ void Application::update() {
 		m_buttons.erase("Hard");
 	}
 
-	if (m_buttons.at("Draw").isEnabled()) {
-		m_buttons.insert({ "Erase", Button{ { 1068, 80 }, { 96, 96 }, { { 0, 97 }, { 32, 32 } } } });
-		m_buttons.insert({ "Undo", Button{ { 936, 212 }, { 96, 96 }, { { 96, 65 }, { 32, 32 } } } });
-		m_buttons.insert({ "Redo", Button{ { 1068, 212 }, { 96, 96 }, { { 128, 65 }, { 32, 32 } } } });
-		m_buttons.insert({ "Size Small", Button{ { 936, 344 }, { 96, 96 }, { { 32, 97 }, { 32, 32 } } } });
-		m_buttons.insert({ "Size Medium", Button{ { 1068, 344 }, { 96, 96 }, { { 64, 97 }, { 32, 32 } } } });
-		m_buttons.insert({ "Size Large", Button{ { 936, 476 }, { 96, 96 }, { { 96, 97 }, { 32, 32 } } } });
-		m_buttons.insert({ "Clear", Button{ { 1068, 476 }, { 96, 96 }, { { 128, 97 }, { 32, 32 } } } });
-	} else {
-		m_buttons.erase("Erase");
-		m_buttons.erase("Undo");
-		m_buttons.erase("Redo");
-		m_buttons.erase("Size Small");
-		m_buttons.erase("Size Medium");
-		m_buttons.erase("Size Large");
-		m_buttons.erase("Clear");
-	}
-
-
 	if (m_buttons.at("New Game").isEnabled()) {
 		if (m_buttons.at("Easy").isEnabled()) {
 			m_grid = Grid(m_window, { 10, 10 }, 8);
@@ -91,6 +69,8 @@ void Application::update() {
 			m_buttons.at("New Game").disable();
 		}
 	}
+
+	m_grid.update(deltaTime);
 }
 
 
@@ -98,8 +78,6 @@ void Application::render() {
 	m_window->clear({ 50, 40, 80 });
 
 	m_grid.render();
-	m_canvas.render();
-
 
 	for (auto& [str, button] : m_buttons) {
 		m_window->draw(button);
